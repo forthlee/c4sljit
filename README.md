@@ -18,7 +18,7 @@ To build and run `c4sljit`, you need:
 ## Building
 1. Clone the repository:
    ```bash
-   git clone https://github.com/<your-username>/c4sljit.git
+   git clone https://github.com/forthlee/c4sljit.git
    cd c4sljit
    ```
 2. Compile the code using the provided command:
