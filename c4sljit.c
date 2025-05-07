@@ -669,6 +669,5 @@ int main(int argc, char **argv) {
 
   sljit_free_compiler(C);
   sljit_free_code(code, NULL);
-  free(e_lo);
   return result;
 }
