@@ -78,18 +78,3 @@ Output:
 ```
 Hello, JIT World!
 ```
-
-## Contributing
-Contributions are welcome! Please:
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature-name`).
-3. Commit your changes (`git commit -m "Add feature"`).
-4. Push to the branch (`git push origin feature-name`).
-5. Open a pull request.
-
-## License
-This project is licensed under the MIT License, consistent with the original `c4` project. See the `LICENSE` file for details.
-
-## Acknowledgments
-- Robert Swierczek for the original `c4` compiler.
-- Zoltan Herczeg for the SLJIT library.
