@@ -197,8 +197,8 @@ void emit_sLjit(int64_t *pc) {
     case GETC: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_getchar)); break;
     case PRTF:
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1)); // para = *(pc+1), ADJ para after JSR
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf)); break;
-    
+      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf));
+      break;    
     case EXIT:
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, (int64_t)"exit(%lld)\n");
