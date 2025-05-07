@@ -1,4 +1,4 @@
-# c4sljit - JIT-Enhanced C Compiler
+# c4sljit - JIT-Enhanced C4 Compiler
 
 ## Overview
 `c4sljit` is a modified version of the `c4` compiler, originally developed by Robert Swierczek ([rswier/c4](https://github.com/rswier/c4)). The original `c4` is a minimal C compiler implemented in four functions, using a simple virtual machine (VM) for code execution. This project replaces the VM with a Just-In-Time (JIT) compilation approach using the [SLJIT](https://github.com/zherczeg/sljit) library, aiming to improve performance by generating native machine code at runtime.
