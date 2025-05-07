@@ -48,19 +48,22 @@ enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz };
 
 static void     SLJIT_FUNC _drop(sljit_sw n) { sp += n; }
 static void     SLJIT_FUNC _push(sljit_sw c) { *--sp = c; }
-static int64_t  SLJIT_FUNC _pop(void) {	return *sp++; }
-static int64_t *SLJIT_FUNC _sp(void) { return sp; }
+static int64_t  SLJIT_FUNC _pop() {	return *sp++; }
+static int64_t *SLJIT_FUNC _sp() { return sp; }
 
-static int SLJIT_FUNC _open(sljit_sw n)   { int64_t *t; t = sp + n; return open((char *)t[-1], t[-2]); }
-static int SLJIT_FUNC _read(sljit_sw n)   { int64_t *t; t = sp + n; return read(t[-1], (char *)t[-2], t[-3]); }
-static int SLJIT_FUNC _close(sljit_sw n)  { int64_t *t; t = sp + n; return close(t[-1]); }
-static int SLJIT_FUNC _printf(sljit_sw n) { int64_t *t; t = sp + n; return printf((char *)t[-1], t[-2], t[-3], t[-4], t[-5], t[-6]); }
-static int SLJIT_FUNC _getchar(void)      {	return getchar(); }
+static int64_t SLJIT_FUNC _open()    { return open((char *)sp[1], *sp); }
+static int64_t SLJIT_FUNC _read()    { return read(sp[2], (char *)sp[1], *sp); }
+static int64_t SLJIT_FUNC _close()   { return close(*sp); }
+static int64_t SLJIT_FUNC _malloc()  { return (int64_t)malloc(*sp); }
+static int64_t SLJIT_FUNC _memset()  { return (int64_t)memset((char *)sp[2], sp[1], *sp); }
+static int64_t SLJIT_FUNC _memcmp()  { return memcmp((char *)sp[2], (char *)sp[1], *sp); }
+static int64_t SLJIT_FUNC _getchar() { return getchar(); }
+static void    SLJIT_FUNC _free()    { free((void *)*sp); }
+static int64_t SLJIT_FUNC _printf(sljit_sw n) { 
+  int64_t *t = sp + n; // Retrieve arguments from the stack in reverse order
+  return printf((char *)t[-1], t[-2], t[-3], t[-4], t[-5], t[-6]);
+}
 
-static void *SLJIT_FUNC _malloc(sljit_sw n) { int64_t *t; t = sp + n; return malloc(t[-1]); }
-static void *SLJIT_FUNC _memset(sljit_sw n) { int64_t *t; t = sp + n; return memset((char *)t[-1], t[-2], t[-3]); }
-static int   SLJIT_FUNC _memcmp(sljit_sw n) { int64_t *t; t = sp + n; return memcmp((char *)t[-1], (char *)t[-2], t[-3]); }
-static void  SLJIT_FUNC _free(sljit_sw n)   { int64_t *t; t = sp + n; free((void *)t[-1]); }
 struct label_st {
 	int64_t e_no;
 	struct  sljit_label *e_lab;
@@ -184,41 +187,18 @@ void emit_sLjit(int64_t *pc) {
       sljit_emit_op0(C, SLJIT_DIVMOD_S32);
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_R1, 0);
       break;
-    case OPEN:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_open));
-      break;
-    case READ:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_read));
-      break;
-    case CLOS:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_close));
-      break;
-    case GETC:
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_getchar));
-      break;
+    case OPEN: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_open)); break;
+    case READ: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_read)); break;
+    case CLOS: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_close)); break;
+    case MALC: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_malloc)); break;
+    case FREE: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_free)); break;
+    case MSET: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_memset)); break;
+    case MCMP: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_memcmp)); break;
+    case GETC: sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_getchar)); break;
     case PRTF:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf));
-      break;
-    case MALC:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_malloc));
-      break;
-    case FREE:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_free));
-      break;
-    case MSET:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_memset));
-      break;
-    case MCMP:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1));
-      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_memcmp));
-      break;
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, *(pc+1)); // para = *(pc+1), ADJ para after JSR
+      sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf)); break;
+    
     case EXIT:
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, (int64_t)"exit(%lld)\n");
