@@ -36,15 +36,6 @@ Run the compiler with a C source file:
 - **`-s`**: Optional flag to print the source code and intermediate code during compilation for debugging.
 - `<source_file.c>`: The input C source file to compile and execute.
 
-Example:
-```bash
-./c4sljit example.c
-```
-To debug:
-```bash
-./c4sljit -s example.c
-```
-
 ## How It Works
 1. **Parsing**: The compiler reads the input C source, tokenizes it, and builds a symbol table.
 2. **Code Generation**: It generates intermediate code (opcodes) similar to the original `c4` VM, but these are translated into SLJIT instructions.
