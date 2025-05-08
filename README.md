@@ -62,7 +62,7 @@ To debug:
 - SLJIT-specific constraints, such as platform-dependent code generation.
 - Error handling is minimal, with basic error messages for syntax or compilation issues.
 
-## Example
+## Examples
 Compile and run:
 ```bash
 ./c4sljit examples/hello.c
