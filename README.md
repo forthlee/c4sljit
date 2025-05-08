@@ -63,18 +63,12 @@ To debug:
 - Error handling is minimal, with basic error messages for syntax or compilation issues.
 
 ## Example
-An example C program (`example.c`):
-```c
-int main() {
-    printf("Hello, JIT World!\n");
-    return 0;
-}
-```
 Compile and run:
 ```bash
-./c4sljit example.c
+./c4sljit examples/hello.c
+./c4sljit examples/fib.c
+./c4sljit examples/brainf.c examples/hello.bf
+./c4sljit examples/c4.c examples/hello.c
+./c4sljit examples/c4.c examples/c4.c examples/hello.c
 ```
-Output:
-```
-Hello, JIT World!
-```
+
