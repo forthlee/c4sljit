@@ -129,7 +129,7 @@ void emit_sLjit(int64_t *pc) {
     case BZ:  jump_push(operand, sljit_emit_cmp(C, SLJIT_EQUAL, SLJIT_R0, 0, SLJIT_IMM, 0)); break;
     case BNZ: jump_push(operand, sljit_emit_cmp(C, SLJIT_NOT_EQUAL, SLJIT_R0, 0, SLJIT_IMM, 0)); break;
     case ENT:
-      sljit_emit_enter(C, 0, SLJIT_ARGS1(W, W), 2, 1, (operand+1) * sizeof(sljit_sw));
+      sljit_emit_enter(C, 0, SLJIT_ARGS0(W), 2, 1, (operand+1) * sizeof(sljit_sw));
       sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS0(W), SLJIT_IMM, SLJIT_FUNC_ADDR(_sp));
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_SP), 0, SLJIT_R0, 0);
       break;
@@ -274,7 +274,8 @@ void next() {
       ++p;
       if (tk == '"') ival = (int64_t)pp; else tk = Num;
       return;
-    } else if (tk == '=') { if (*p == '=') { ++p; tk = Eq; } else tk = Assign; return; }
+    } 
+    else if (tk == '=') { if (*p == '=') { ++p; tk = Eq;  } else tk = Assign; return; }
     else if (tk == '+') { if (*p == '+') { ++p; tk = Inc; } else tk = Add; return; }
     else if (tk == '-') { if (*p == '-') { ++p; tk = Dec; } else tk = Sub; return; }
     else if (tk == '!') { if (*p == '=') { ++p; tk = Ne; } return; }
@@ -378,8 +379,9 @@ void expr(int lev) {
       *d = (int64_t)(e + 3); *++e = JMP; d = ++e;
       expr(Cond);
       *d = (int64_t)(e + 1);
-    } else if (tk == Lor) { next(); *++e = BNZ; d = ++e; expr(Lan); *d = (int64_t)(e + 1); ty = INT; }
-    else if (tk == Lan) { next(); *++e = BZ; d = ++e; expr(Or); *d = (int64_t)(e + 1); ty = INT; }
+    } 
+    else if (tk == Lor) { next(); *++e = BNZ; d = ++e; expr(Lan); *d = (int64_t)(e + 1); ty = INT; }
+    else if (tk == Lan) { next(); *++e = BZ;  d = ++e; expr(Or);  *d = (int64_t)(e + 1); ty = INT; }
     else if (tk == Or)  { next(); *++e = PSH; expr(Xor); *++e = OR;  ty = INT; }
     else if (tk == Xor) { next(); *++e = PSH; expr(And); *++e = XOR; ty = INT; }
     else if (tk == And) { next(); *++e = PSH; expr(Eq);  *++e = AND; ty = INT; }
@@ -400,11 +402,12 @@ void expr(int lev) {
       if (t > PTR && t == ty) { *++e = SUB; *++e = PSH; *++e = IMM; *++e = sizeof(int64_t); *++e = DIV; ty = INT; }
       else if ((ty = t) > PTR) { *++e = PSH; *++e = IMM; *++e = sizeof(int64_t); *++e = MUL; *++e = SUB; }
       else *++e = SUB;
-    } else if (tk == Mul) { next(); *++e = PSH; expr(Inc); *++e = MUL; ty = INT; }
+    } 
+    else if (tk == Mul) { next(); *++e = PSH; expr(Inc); *++e = MUL; ty = INT; }
     else if (tk == Div) { next(); *++e = PSH; expr(Inc); *++e = DIV; ty = INT; }
     else if (tk == Mod) { next(); *++e = PSH; expr(Inc); *++e = MOD; ty = INT; }
     else if (tk == Inc || tk == Dec) {
-      if (*e == LC) { *e = PSH; *++e = LC; }
+      if      (*e == LC) { *e = PSH; *++e = LC; }
       else if (*e == LI) { *e = PSH; *++e = LI; }
       else { printf("%d: bad lvalue in post-increment\n", line); exit(-1); }
       *++e = PSH; *++e = IMM; *++e = (ty > PTR) ? sizeof(int64_t) : sizeof(char);
@@ -478,19 +481,19 @@ int main(int argc, char **argv) {
   if ((fd = open(*argv, 0)) < 0) { printf("could not open(%s)\n", *argv); return -1; }
 
   poolsz = 256 * 1024;
-  if (!(sym = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; }
+  if (!(sym  = malloc(poolsz))) { printf("could not malloc(%d) symbol area\n", poolsz); return -1; }
   if (!(e_lo = le = e = malloc(poolsz))) { printf("could not malloc(%d) text area\n", poolsz); return -1; }
   if (!(data = malloc(poolsz))) { printf("could not malloc(%d) data area\n", poolsz); return -1; }
-  if (!(sp = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }
+  if (!(sp   = malloc(poolsz))) { printf("could not malloc(%d) stack area\n", poolsz); return -1; }
   
-  memset(sym, 0, poolsz);
-  memset(e, 0, poolsz);
+  memset(sym,  0, poolsz);
+  memset(e,    0, poolsz);
   memset(data, 0, poolsz);
 
   p = "char else enum if int int64_t return sizeof while "
       "open read close getchar printf malloc free memset memcmp exit void main";
   i = Char; while (i <= While) { next(); id[Tk] = i++; }
-  i = OPEN; while (i <= EXIT) { next(); id[Class] = Sys; id[Type] = INT; id[Val] = i++; }
+  i = OPEN; while (i <= EXIT)  { next(); id[Class] = Sys; id[Type] = INT; id[Val] = i++; }
   next(); id[Tk] = Char;
   next(); idmain = id;
 
@@ -529,7 +532,7 @@ int main(int argc, char **argv) {
     while (tk != ';' && tk != '}') {
       ty = bt;
       while (tk == Mul) { next(); ty = ty + PTR; }
-      if (tk != Id) { printf("%d: bad global declaration\n", line); return -1; }
+      if (tk != Id)  { printf("%d: bad global declaration\n", line); return -1; }
       if (id[Class]) { printf("%d: duplicate global definition\n", line); return -1; }
       next();
       id[Type] = ty;
@@ -545,8 +548,8 @@ int main(int argc, char **argv) {
           if (tk != Id) { printf("%d: bad parameter declaration\n", line); return -1; }
           if (id[Class] == Loc) { printf("%d: duplicate parameter definition\n", line); return -1; }
           id[HClass] = id[Class]; id[Class] = Loc;
-          id[HType] = id[Type]; id[Type] = ty;
-          id[HVal] = id[Val]; id[Val] = i++;
+          id[HType]  = id[Type];  id[Type]  = ty;
+          id[HVal]   = id[Val];   id[Val]   = i++;
           next();
           if (tk == ',') next();
         }
@@ -563,8 +566,8 @@ int main(int argc, char **argv) {
             if (tk != Id) { printf("%d: bad local declaration\n", line); return -1; }
             if (id[Class] == Loc) { printf("%d: duplicate local definition\n", line); return -1; }
             id[HClass] = id[Class]; id[Class] = Loc;
-            id[HType] = id[Type]; id[Type] = ty;
-            id[HVal] = id[Val]; id[Val] = ++i;
+            id[HType]  = id[Type];  id[Type]  = ty;
+            id[HVal]   = id[Val];   id[Val]   = ++i;
             next();
             if (tk == ',') next();
           }
@@ -577,8 +580,8 @@ int main(int argc, char **argv) {
         while (id[Tk]) {
           if (id[Class] == Loc) {
             id[Class] = id[HClass];
-            id[Type] = id[HType];
-            id[Val] = id[HVal];
+            id[Type]  = id[HType];
+            id[Val]   = id[HVal];
           }
           id = id + Idsz;
         }
@@ -604,7 +607,7 @@ int main(int argc, char **argv) {
   if (!C) { printf("Could not create SLJIT compiler\n"); return -1; }
 
   sljit_emit_enter(C, 0, SLJIT_ARGS0(W), 1, 0, 0);
-  e_jump = sljit_emit_call(C, SLJIT_CALL, SLJIT_ARGS1(W, W));
+  e_jump = sljit_emit_call(C, SLJIT_CALL, SLJIT_ARGS0(W));
   sljit_emit_return(C, SLJIT_MOV, SLJIT_R0, 0);
 
   jump_push((int64_t)pc, e_jump);
