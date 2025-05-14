@@ -57,31 +57,6 @@ static int64_t SLJIT_FUNC _printf(sljit_sw n) {
   return printf((char *)t[-1], t[-2], t[-3], t[-4], t[-5], t[-6]);
 }
 
-void emit_bp() { // [SLJIT_SP] = sp
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_MEM0(), (sljit_sw)&sp);
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_SP), 0, SLJIT_R0, 0);
-}
-
-void emit_drop(int64_t operand) { // *sp += operand
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_MEM0(), (sljit_sw)&sp);              // R1 = sp
-  sljit_emit_op2(C, SLJIT_ADD, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, operand* sizeof(sljit_sw));  // R1+n
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_R1, 0);              // sp = R1
-}
-
-void emit_push() { // *--sp = R0
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_MEM0(), (sljit_sw)&sp);              // R1 = sp
-  sljit_emit_op2(C, SLJIT_SUB, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, sizeof(int64_t));  // R1-- 
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_R1, 0);              // sp = R1   : --sp
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_R1), 0, SLJIT_S0, 0);                  // [R1] = S0 : *sp = c
-}
-
-void emit_pop() { // R0 = *sp++
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_MEM0(), (sljit_sw)&sp);              // R1 = sp
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_R1), 0);                  // R0 = [R1] : R0 = *sp
-  sljit_emit_op2(C, SLJIT_ADD, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, sizeof(int64_t));  // R1++
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_R1, 0);              // sp = R1   : sp++
-}
-
 struct label_st {
 	int64_t e_no;
 	struct  sljit_label *e_lab;
@@ -113,16 +88,34 @@ void jump_push(int64_t operand, struct sljit_jump *e_jump) {
   jump_sp++;
 }
 
+void emit_bp() { // [SLJIT_SP] = sp
+  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_SP), 0, SLJIT_MEM0(), (sljit_sw)&sp);
+}
+
+void emit_drop(int64_t operand) { // *sp += operand
+  sljit_emit_op2(C, SLJIT_ADD, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_IMM, operand* sizeof(sljit_sw));
+}
+
+void emit_push() { // *--sp = R0
+  sljit_emit_op2(C, SLJIT_SUB, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_IMM, sizeof(int64_t)); 
+  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R2, 0, SLJIT_MEM0(), (sljit_sw)&sp); 
+  sljit_emit_op1(C, SLJIT_MOV, SLJIT_MEM1(SLJIT_R2), 0, SLJIT_R0, 0);
+}
+
+void emit_pop() { // R2 = *sp++
+  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R2, 0, SLJIT_MEM0(), (sljit_sw)&sp);
+  sljit_emit_op2(C, SLJIT_ADD, SLJIT_MEM0(), (sljit_sw)&sp, SLJIT_R2, 0, SLJIT_IMM, sizeof(int64_t)); 
+  sljit_emit_op1(C, SLJIT_MOV, SLJIT_R2, 0, SLJIT_MEM1(SLJIT_R2), 0);  
+}
+
 void emit_binary_op(int64_t operation) {
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
   emit_pop();
-  sljit_emit_op2(C, operation, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_S0, 0);
+  sljit_emit_op2(C, operation, SLJIT_R0, 0, SLJIT_R2, 0, SLJIT_R0, 0);
 }
 
 void emit_compare_op(int64_t flag, int64_t set_flag) {
-  sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
   emit_pop();
-  sljit_emit_op2u(C, SLJIT_SUB | set_flag, SLJIT_R0, 0, SLJIT_S0, 0);
+  sljit_emit_op2u(C, SLJIT_SUB | set_flag, SLJIT_R2, 0, SLJIT_R0, 0);
   sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, 0);
   sljit_emit_op_flags(C, SLJIT_MOV, SLJIT_R0, 0, flag);
 }
@@ -149,13 +142,11 @@ void emit_sLjit(int64_t *pc) {
     case BZ:  jump_push(operand, sljit_emit_cmp(C, SLJIT_EQUAL, SLJIT_R0, 0, SLJIT_IMM, 0)); break;
     case BNZ: jump_push(operand, sljit_emit_cmp(C, SLJIT_NOT_EQUAL, SLJIT_R0, 0, SLJIT_IMM, 0)); break;
     case ENT:
-      sljit_emit_enter(C, 0, SLJIT_ARGS0(W), 2, 1, (operand+1) * sizeof(sljit_sw));
+      sljit_emit_enter(C, 0, SLJIT_ARGS0(W), 3, 0, (operand+1) * sizeof(sljit_sw));
       emit_bp();      
       break;
     case ADJ:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
       emit_drop(operand);
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
       break;
     case LEV:
       sljit_emit_return(C, SLJIT_MOV, SLJIT_R0, 0);
@@ -166,15 +157,11 @@ void emit_sLjit(int64_t *pc) {
       break;
     case SI:
     case SC:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
       emit_pop();
-      sljit_emit_op1(C, opcode == SI ? SLJIT_MOV : SLJIT_MOV_U8, SLJIT_MEM1(SLJIT_R0), 0, SLJIT_S0, 0);
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
+      sljit_emit_op1(C, opcode == SI ? SLJIT_MOV : SLJIT_MOV_U8, SLJIT_MEM1(SLJIT_R2), 0, SLJIT_R0, 0);
       break;
     case PSH:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
       emit_push();
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
       break;
     case OR:  emit_binary_op(SLJIT_OR); break;
     case XOR: emit_binary_op(SLJIT_XOR); break;
@@ -190,16 +177,16 @@ void emit_sLjit(int64_t *pc) {
     case ADD: emit_binary_op(SLJIT_ADD); break;
     case SUB: emit_binary_op(SLJIT_SUB); break;
     case MUL: emit_binary_op(SLJIT_MUL); break;
-    case DIV:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
+    case DIV: // a = *sp++ / a; R0 = R0 / R1
       emit_pop();
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_S0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_R0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_R2, 0);
       sljit_emit_op0(C, SLJIT_DIV_S32);
       break;
-    case MOD:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
+    case MOD: // a = *sp++ % a; R0 = R0 % R1
       emit_pop();
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_S0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_R0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_R2, 0);
       sljit_emit_op0(C, SLJIT_DIVMOD_S32);
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_R1, 0);
       break;
@@ -216,15 +203,14 @@ void emit_sLjit(int64_t *pc) {
       sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf));
       break;    
     case EXIT:
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_S0, 0, SLJIT_R0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R1, 0, SLJIT_R0, 0);
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, (int64_t)"exit(%lld)\n");
       emit_push();
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
+      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_R1, 0);
       emit_push();
       sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, 2);
       sljit_emit_icall(C, SLJIT_CALL, SLJIT_ARGS1(W, W), SLJIT_IMM, SLJIT_FUNC_ADDR(_printf));
-      sljit_emit_op1(C, SLJIT_MOV, SLJIT_R0, 0, SLJIT_S0, 0);
-      sljit_emit_return(C, SLJIT_MOV, SLJIT_R0, 0);
+      sljit_emit_return(C, SLJIT_MOV, SLJIT_R1, 0);
       break;
     default:
       printf("Unknown instruction %lld\n", opcode);
