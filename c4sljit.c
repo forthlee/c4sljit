@@ -78,7 +78,7 @@ void jump_pop(int64_t *e_no, struct sljit_jump **e_jump) {
 	*e_jump = jump_arr[jump_sp].e_jump;
 }
 
-// Helper functions for emit_sLjit
+// Helper functions for emit_sljit
 void jump_push(int64_t operand, struct sljit_jump *e_jump) {
   int64_t e_no = (int64_t*)operand - e_lo;
 
@@ -121,7 +121,7 @@ void emit_compare_op(int64_t flag, int64_t set_flag) {
 }
 
 // Function to emit SLJIT instructions based on VM opcodes
-void emit_sLjit(int64_t *pc) {
+void emit_sljit(int64_t *pc) {
   int64_t opcode = *pc++;
   int64_t operand = (opcode <= ADJ) ? *pc++ : 0;
 
@@ -646,7 +646,7 @@ int main(int argc, char **argv) {
         break;
       }
     }
-    emit_sLjit(pc);
+    emit_sljit(pc);
     if (*pc++ <= ADJ) pc++;
   }
 
