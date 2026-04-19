@@ -63,3 +63,14 @@ Compile and run:
 ./c4sljit examples/c4.c examples/c4.c examples/hello.c
 ```
 
+Performance Comparison:
+```bash
+> time ./c4 examples/fib.c
+fib(30)=832040
+exit(0) cycle = 48465680
+./c4 examples/fib.c  0.24s user 0.00s system 33% cpu 0.729 total
+
+> time ./c4sljit examples/fib.c                             
+fib(30)=832040
+./c4sljit examples/fib.c  0.04s user 0.00s system 95% cpu 0.041 total
+```
