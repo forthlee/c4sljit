@@ -10,7 +10,7 @@ int main()
 {
   int n;
 
-  n = 10;
+  n = 30;
   printf("fib(%d)=%d\n", n, fib(n));
   return 0;
 }
